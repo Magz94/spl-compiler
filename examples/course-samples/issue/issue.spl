@@ -1,0 +1,9 @@
+
+proc test ( ref a : array[10] of int) {
+}
+proc main () {
+var d : array[10] of int;
+test(d);
+}
+
+// can manins method name declared as parameter?

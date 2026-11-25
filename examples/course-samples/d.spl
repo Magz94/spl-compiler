@@ -1,0 +1,39 @@
+// Deklaration der Prozedur zum Sortieren des Arrays
+proc sortiereArray(arr: int[], n: int) {
+    var i, j, temp: int;
+    for i from 0 to n-1 {
+        for j from 0 to n-2 {
+            if arr[j] > arr[j+1] {
+                // Vertausche die Elemente, um das Array zu sortieren
+                temp := arr[j];
+                arr[j] := arr[j+1];
+                arr[j+1] := temp;
+            }
+        }
+    }
+}
+
+proc main() {
+    const MAX_SIZE = 10;
+    var arr: int[MAX_SIZE];
+    var n, i: int;
+
+    // Einlesen der Anzahl der Elemente im Array
+    print("Geben Sie die Anzahl der Elemente im Array ein: ");
+    readi(n);
+
+    // Einlesen der Elemente des Arrays
+    print("Geben Sie die Elemente des Arrays ein:\n");
+    for i from 0 to n-1 {
+        readi(arr[i]);
+    }
+
+    // Aufruf der Sortierprozedur
+    sortiereArray(arr, n);
+
+    // Ausgabe des sortierten Arrays
+    print("Das sortierte Array ist: ");
+    for i from 0 to n-1 {
+        print(arr[i], " ");
+    }
+}

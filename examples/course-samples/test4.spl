@@ -1,0 +1,22 @@
+proc factorialRecursive(ref n: int, ref result: int) {
+    var temp: int;
+if (n = 0) {
+result := 1;  // Base case: 0! = 1
+} else {
+temp := n - 1;  // Prepare the next value for recursion
+factorialRecursive(temp, result);  // Recursive call
+result := result * n;  // Update the result with the current n
+}
+}
+proc main() {
+    var i: int;
+    var fak: int;
+    readi(i);  // Read the input value for which factorial is computed
+    if (i < 0) {
+        printi(0);  // print out 0, as no factorial gives out 0.
+    } else {
+        fak := 1;  // Initialize factorial result
+        factorialRecursive(i, fak);  // Compute factorial
+        printi(fak);  // Output the factorial result
+    }
+}

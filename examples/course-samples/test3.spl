@@ -1,0 +1,48 @@
+type a = array [5] of int;
+proc fillArray( ref a1: a)  { // can two procedures have the same name of parameter?
+    var k: int;
+    k := 0;
+    while (k < 5) {
+        readi(  a1[k] );
+        k := k + 1;
+    }
+}
+proc sortArray(ref a2: a) {
+    // Using bubble sort algorithm.
+    var i: int;
+    var j: int;
+    var temp: int;
+    var swap: int;
+
+    i := 0;
+    while (i < 5 - 1) {  // Need n-1 passes for n elements, here n is 5
+        swap := 0; // To check if any swaps occurred in this pass
+        j := 0;
+        while (j < 5 - i - 1) {  // Last i elements are already sorted
+            if (a2[j] > a2[j + 1]) {
+                // Swap a2[j] and a2[j+1]
+                temp := a2[j];
+                a2[j] := a2[j + 1];
+                a2[j + 1] := temp;
+                swap := 1;  // Mark swap occurred
+            }
+            j := j + 1;
+        }
+        if (swap = 0)  i := 5;
+        else  i := i + 1;
+    }
+}
+proc printArray(ref a3: a) {
+    var k: int;
+    k := 0;
+    while (k < 5) {
+        printi(a3[k]);
+        k := k + 1;
+    }
+}
+    proc main() {
+        var A: a;
+        fillArray( A);
+        sortArray( A);
+        printArray( A); // after sort
+    }

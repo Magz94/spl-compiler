@@ -1,0 +1,5 @@
+proc main() {
+    var x: int;
+    x := 40 + 2;
+    printi(x);
+}

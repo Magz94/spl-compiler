@@ -1,0 +1,20 @@
+# Maven and generated outputs
+/target/
+/dependency-reduced-pom.xml
+*.class
+*.jar
+*.o
+*.bin
+*.x
+*.s
+*.log
+# Editors and operating systems
+.idea/
+.vscode/
+*.iml
+.DS_Store
+__MACOSX/
+# Generated scanner/parser (Maven regenerates these)
+/src/main/java/de/thm/mni/compilerbau/phases/_01_scanner/Scanner.java
+/src/main/java/de/thm/mni/compilerbau/phases/_02_03_parser/Parser.java
+/src/main/java/de/thm/mni/compilerbau/phases/_02_03_parser/Sym.java

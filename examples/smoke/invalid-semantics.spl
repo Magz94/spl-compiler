@@ -1,0 +1,3 @@
+proc main() {
+    missing := 42;
+}

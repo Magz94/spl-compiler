@@ -1,0 +1,24 @@
+type T = int;
+//type myInt = int;
+proc main() {
+    var x: int;
+    var y: int;
+    var sum: int ; // even if sum does not have an initial state, should it be passed by reference?
+
+    // Read two numbers from the user
+    readi( x); // do we must write ref, so the value can be changed?
+    readi( y);
+    sumCalc(x,y, sum);
+    // Print the sum
+    printi('.');
+/////////// asihasiofhdsiofhoisd
+//iashfiosahfisd
+}
+proc sumCalc( ref x: int , ref y: int , ref sum: int ) {
+    sum:= x + y;
+    //k: int;
+}
+type W = int;
+
+
+

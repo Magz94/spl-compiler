@@ -1,0 +1,18 @@
+proc main(){
+var x: int ;
+var y: int ;
+var z: int ;
+
+//"Geben Sie die erste Zahl ein: "
+readi(x);
+//"geben sie eine andere Zahl"
+readi(y);
+z:= summe(x,y);
+printc(z);
+}
+
+proc summe(x: int ,y: int ){
+
+printi(x+y);
+
+}

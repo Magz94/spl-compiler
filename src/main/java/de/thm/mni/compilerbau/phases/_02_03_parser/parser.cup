@@ -1,0 +1,364 @@
+    package de.thm.mni.compilerbau.phases._02_03_parser;
+
+    import java.util.List;
+    import java.util.LinkedList;
+    import java_cup.runtime.*;
+    import de.thm.mni.compilerbau.phases._01_scanner.Scanner;
+    import de.thm.mni.compilerbau.absyn.*;
+    import de.thm.mni.compilerbau.table.Identifier;
+    import de.thm.mni.compilerbau.utils.SplError;
+    import de.thm.mni.compilerbau.CommandLineOptions;
+
+    parser code {:
+      public CommandLineOptions options = null;
+
+
+      public void syntax_error(Symbol currentToken) {
+        // Apparently there is a cup bug that causes expected_token_ids() to return incorrect results on first call
+        // This is why this call is inserted.
+        this.expected_token_ids();
+
+        throw SplError.SyntaxError(new Position(currentToken.left, currentToken.right),
+                this.symbl_name_from_id(currentToken.sym),
+                this.expected_token_ids().stream().map(this::symbl_name_from_id).toList());
+      }
+
+      /**
+       * @return An empty list. (Uses LinkedList)
+       */
+      public static <E> List<E> nil() {
+          return new LinkedList<E>();
+      }
+
+      /**
+       * Constructs a list from a head and a tail without modifying the tail (Uses LinkedList).
+       * Use this as a helper if you don't want to deal with constructing lists manually.
+       *
+       * @param head The head of the list
+       * @param tail The tail of the list
+       * @return A list containing the head element and all elements of tail
+       */
+      public static <E> List<E> cons(E head, List<E> tail) {
+        List<E> copy = new LinkedList(tail);
+        copy.add(0, head);
+        return copy;
+      }
+    :}
+
+    /* Terminals/Tokens */
+    terminal LBRACK, RBRACK, LPAREN, RPAREN, LCURL, RCURL;         //Braces, parenthesis, brackets
+    terminal LT, LE, GT, GE, NE, EQ;                               //Comparison operators
+    terminal PLUS, MINUS, STAR, SLASH;                             //Arithmetic operators
+    terminal ASGN, COMMA, COLON, SEMIC;                            //Other delimiters
+    terminal TYPE, PROC, ARRAY, OF, REF, VAR, IF, ELSE, WHILE;     //Keywords
+
+    terminal Identifier IDENT;    //Identifiers Change to string or identifier?
+    terminal Integer INTLIT;      //Integer literalstatements
+    /* Non-terminals */
+    /*Program Definitions */
+    non terminal Program program;
+    non terminal List<GlobalDefinition> globalDefinitionList;
+    non terminal GlobalDefinition GlobalDefinition;
+    /* Type Definition */
+    non terminal TypeDefinition typeDef;
+    /*Type Expression*/
+    non terminal TypeExpression typeExpression;
+    non terminal ArrayTypeExpression arrayTypeExpression;
+    non terminal NamedTypeExpression namedTypeExpression;
+    /* Procedure Definition */
+    non terminal ProcedureDefinition procedureDef;
+    /*Parameter */
+    non terminal ParameterDefinition param;
+    non terminal List<ParameterDefinition> parameterList;
+    non terminal List<ParameterDefinition> parameterListTail;
+    /*Variables*/
+    non terminal Variable variable;
+    non terminal NamedVariable namedVariable;
+    non terminal ArrayAccess arrayAccess;
+    non terminal VariableExpression variableExpression;
+    non terminal List<VariableDefinition> variableDeclarationList;
+    non terminal VariableDefinition variableDeclaration;
+    /*Statements*/
+    non terminal List<Statement> statementList;
+    non terminal Statement Statement;
+    non terminal IfStatement IfStatement; // is it better here to add an elsePart and add non terminal IfStatement elsePart
+    //non terminal Statement elsePart;
+    non terminal WhileStatement WhileStatement;
+    non terminal CallStatement callStatement;
+    non terminal AssignStatement AssignStatement;
+    non terminal CompoundStatement CompoundStatement;
+    non terminal EmptyStatement emptyStatement;
+    /*Expression*/
+    non terminal List<Expression> argumentsList;
+    non terminal List<Expression> argumentsListTail;
+    non terminal Expression ComparativeExpression;
+    non terminal UnaryExpression UnaryExpression;
+    non terminal Expression Expression;
+    non terminal Expression term;
+    non terminal Expression factor;
+    non terminal IntLiteral IntLiteral;
+    non terminal BinaryExpression.Operator op;
+    start with program;
+
+    //program ::= INTLIT; // TODO (assignment 2 and 3): Just a dummy, needs to be replaced by the actual spl grammar.
+    /* Grammar Rules */
+   /* Program */
+    program ::= globalDefinitionList:definitions {:
+        RESULT = new Program(new Position(1, 1), definitions);
+    :};
+    /* Program Definitions */
+    // i changed from globalDefinitionList GlobalDefinition to GlobalDefinition globalDefinitionList 
+    globalDefinitionList ::= /* empty */ {:
+        RESULT = nil(); // Return an empty list for no definitions
+    :}
+    | GlobalDefinition:def globalDefinitionList:list {:
+        RESULT = cons(def, list); // Prepend definition to the list
+    :};
+    // Type and procedure definitions as choices for global definitions
+    GlobalDefinition ::= typeDef:type {:
+        RESULT = type;
+    :}
+    | procedureDef:proc {:
+        RESULT = proc;
+    :};
+     typeDef ::= TYPE:pos IDENT:name EQ typeExpression:expr SEMIC {:
+         RESULT = new TypeDefinition(new Position(posleft, posright), name, expr); // is position here right?
+     :};
+
+     typeExpression ::= namedTypeExpression:namedExpr {:
+         RESULT = namedExpr;
+     :}
+     | arrayTypeExpression:arrayExpr {:
+         RESULT = arrayExpr;
+     :};
+     namedTypeExpression ::= IDENT:identifier {:
+         RESULT = new NamedTypeExpression(new Position(identifierleft, identifierright), identifier);
+     :};
+     arrayTypeExpression ::= ARRAY:pos LBRACK INTLIT:size RBRACK OF typeExpression:containedType {:
+         RESULT = new ArrayTypeExpression(new Position(posleft, posright), size, containedType); // is position here right?
+     :};
+     /* Procedure Definition */
+     // is position here right?
+     procedureDef ::= PROC:proc IDENT:name LPAREN parameterList:params RPAREN LCURL variableDeclarationList:vars statementList:stmts RCURL:rcurl {:
+         RESULT = new ProcedureDefinition(
+             new Position(procleft, procright), // Assuming you want to span from the name to the closing brace
+             name,
+             params,
+             vars,
+             stmts
+         );
+     :};
+    /*Parameter*/
+    parameterList ::= /* empty */ {:
+        RESULT = nil(); // Return an empty list for no definitions
+    :}
+    | param:parame parameterListTail:tail {:
+        RESULT = cons(parame, tail);
+    :};
+    // Handling the continuation of a parameter list
+    parameterListTail ::= /* empty */ {:
+        RESULT = nil();
+    :}
+    | COMMA param:nextParam parameterListTail:tail {:
+        RESULT = cons(nextParam, tail);
+    :};
+    param ::= REF:pos IDENT:name COLON typeExpression:type {:
+        RESULT = new ParameterDefinition(
+            new Position(posleft, posright), // Position from the start of the identifier to the end of the type expression
+            name,
+            type,
+            true // isReference is true because the REF keyword is present
+        );
+    :}
+    | IDENT:name COLON typeExpression:type {:
+        RESULT = new ParameterDefinition(
+            new Position(nameleft, nameright), // Position from the start of the identifier to the end of the type expression
+            name,
+            type,
+            false // isReference is false as there's no REF keyword
+        );
+    :};
+    /*Statements*/
+    // Statement list
+    statementList ::= /* empty */ {:
+        RESULT = nil();
+    :}
+    | Statement:stmt statementList:tail {:
+        RESULT = cons(stmt, tail);
+    :};
+    Statement ::= IfStatement:ifStmt {:
+        RESULT = ifStmt;
+    :}
+    | WhileStatement:whileStmt {:
+        RESULT = whileStmt;
+    :}
+    | callStatement:callStmt {:
+        RESULT = callStmt;
+    :}
+    | AssignStatement:assignStmt {:
+        RESULT = assignStmt;
+    :}
+    | CompoundStatement:compoundStmt {:
+        RESULT = compoundStmt;
+    :}
+    | emptyStatement:emptyStmt {:
+        RESULT = emptyStmt;
+    :};
+    CompoundStatement ::= LCURL:lcurl statementList:stmtList RCURL:rcurl {:
+        RESULT = new CompoundStatement(new Position(lcurlleft, lcurlright), stmtList);
+    :};
+    variableDeclarationList ::= /* empty */ {:
+        RESULT = nil(); // Return an empty list if there are no variable declarations
+    :}
+    | variableDeclaration:varDecl variableDeclarationList:varDeclList {:
+        RESULT = cons(varDecl, varDeclList); // Prepend the current variable declaration to the list
+    :};
+    variableDeclaration ::= VAR:var IDENT:name COLON typeExpression:typeExpr SEMIC {:
+        RESULT = new VariableDefinition(
+            new Position(varleft, varright), // Position from the start of the var to the end of the type expression
+            name,
+            typeExpr
+        );
+    :};
+    AssignStatement ::= variable:var ASGN Expression:expr SEMIC {:
+        RESULT = new AssignStatement(
+            new Position(varleft, varright),  // Capturing the entire span of the statement
+            var,
+            expr
+        );
+    :};
+    variable ::= namedVariable:var {:
+        RESULT = var;
+    :}
+        | arrayAccess:arr {:
+        RESULT = arr;
+    :};
+    namedVariable ::= IDENT:name {:
+        RESULT = new NamedVariable(
+            new Position(nameleft, nameright), // Assuming position tracking is based on the identifier's span
+            name
+        );
+    :};
+    // Rule for arrayAccess
+    arrayAccess ::= variable:var LBRACK Expression:expr RBRACK {:
+        RESULT = new ArrayAccess(
+            new Position(varleft, varright), // Position from the start of the variable to the end of the expression
+            var,
+            expr
+        );
+    :};
+    WhileStatement ::= WHILE:whileToken LPAREN ComparativeExpression:cond RPAREN Statement:bodyStmt {:
+        RESULT = new WhileStatement(new Position(whileTokenleft, whileTokenright), cond, bodyStmt);
+    :};
+    IfStatement ::= IF:pos LPAREN ComparativeExpression:cond RPAREN Statement:thenStmt ELSE Statement:elseStmt {:
+        RESULT = new IfStatement(
+            new Position(posleft, posright),
+            cond,
+            thenStmt,
+            elseStmt
+        );
+    :}
+    | IF:pos LPAREN ComparativeExpression:cond RPAREN Statement:thenStmt {:
+        RESULT = new IfStatement(
+            new Position(posleft, posright),
+            cond,
+            thenStmt,
+            new EmptyStatement( new Position(posleft, posright))  // No else part so an empty Statement or nu,,?
+        );
+    :};
+    //elsePart ::= ELSE Statement | /* nothing */; // outted: LCURL statementList RCURL
+    callStatement ::= IDENT:procName LPAREN argumentsList:args RPAREN SEMIC {:
+        RESULT = new CallStatement(
+            new Position(procNameleft, procNameright),  // Assuming the position of the call is to be marked at the identifier
+            procName,
+            args
+        );
+    :};
+    emptyStatement ::= SEMIC:pos {:
+        RESULT = new EmptyStatement(
+            new Position(posleft, posright));
+    :};
+    /*arguments*/
+    // Rule for parsing the main list of arguments
+    argumentsList ::= Expression:head argumentsListTail:tail {:
+        RESULT = cons(head, tail);  // Use cons to prepend head to tail
+    :}
+    | /* epsilon */ {:
+        RESULT = nil();  // Return an empty list if there are no arguments
+    :};
+
+    // Rule for parsing the tail part of the arguments list
+    argumentsListTail ::= COMMA Expression:nextExpression argumentsListTail:tail {:
+        RESULT = cons(nextExpression, tail);  // Continue building the list recursively
+    :}
+    | /* epsilon */ {:
+        RESULT = nil();  // Return an empty list when no more expressions are found
+    :};
+
+    /*Expressions*/
+    // Does it make here more Logic, to assign ComparativeExpression to BinaryExpression to align
+    // with the logic and AST classes?
+    ComparativeExpression ::= ComparativeExpression:lhs op:operator Expression:rhs {:
+        RESULT = new BinaryExpression(new Position(operatorleft, operatorright), operator, lhs, rhs);
+    :}
+    | Expression:expr {:
+        RESULT = expr;
+    :};
+    Expression ::= Expression:lhs PLUS:plus term:rhs {:
+        RESULT = new BinaryExpression(new Position(plusleft, plusright), BinaryExpression.Operator.ADD, lhs, rhs);
+    :}
+    | Expression:lhs MINUS:minus term:rhs {:
+        RESULT = new BinaryExpression(new Position(minusleft, minusright), BinaryExpression.Operator.SUB, lhs, rhs);
+    :}
+    | term:term {:
+        RESULT = term;
+    :};
+    term ::= term:lhs STAR:mul factor:rhs {:
+        RESULT = new BinaryExpression(new Position(mulleft, mulright), BinaryExpression.Operator.MUL, lhs, rhs);
+    :}
+    | term:lhs SLASH:slash factor:rhs {:
+        RESULT = new BinaryExpression(new Position(slashleft, slashright), BinaryExpression.Operator.DIV, lhs, rhs);
+    :}
+    | factor:factor {:
+        RESULT = factor;
+    :};
+    factor ::= LPAREN ComparativeExpression:expr RPAREN {:
+        RESULT = expr;
+    :}
+    | variableExpression:varExpr {:
+        RESULT = varExpr;
+    :}
+    | IntLiteral:intLit {:
+        RESULT = intLit;
+    :}
+    | UnaryExpression:unaryExpr {:
+        RESULT = unaryExpr;
+    :};
+    /* IntLiteral */
+    IntLiteral ::= INTLIT:intVal {:
+        RESULT = new IntLiteral(new Position(intValleft, intValright), intVal);
+    :};
+    UnaryExpression ::= MINUS:minus factor:fact {:
+        RESULT = new UnaryExpression(new Position(minusleft, minusright), UnaryExpression.Operator.MINUS, fact);
+    :};
+    variableExpression ::= variable:var {:
+        RESULT = new VariableExpression(new Position(varleft, varright), var);
+    :};
+    op ::= LT {:
+        RESULT = BinaryExpression.Operator.LST;
+    :}
+    | GT {:
+        RESULT = BinaryExpression.Operator.GRT;
+    :}
+    | LE {:
+        RESULT = BinaryExpression.Operator.LSE;
+    :}
+    | GE {:
+        RESULT = BinaryExpression.Operator.GRE;
+    :}
+    | NE {:
+        RESULT = BinaryExpression.Operator.NEQ;
+    :}
+    | EQ {:
+        RESULT = BinaryExpression.Operator.EQU;
+    :};
